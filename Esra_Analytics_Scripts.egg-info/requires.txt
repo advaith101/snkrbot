@@ -1,0 +1,7 @@
+mysql.connector
+pandas
+numpy
+datetime
+matplotlib
+plotly
+seaborn

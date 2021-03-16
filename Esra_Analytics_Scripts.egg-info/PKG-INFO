@@ -1,0 +1,11 @@
+Metadata-Version: 1.1
+Name: Esra-Analytics-Scripts
+Version: 0.1.0
+Summary: Analytics Scripts for Esra Web App
+Home-page: https://github.com/advaith101/esra-api
+Author: Esra Systems LLC
+Author-email: info@esrasystems.com
+License: BSD 2-clause
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3.5

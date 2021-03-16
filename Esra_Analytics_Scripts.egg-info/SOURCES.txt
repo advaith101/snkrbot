@@ -1,0 +1,6 @@
+setup.py
+Esra_Analytics_Scripts.egg-info/PKG-INFO
+Esra_Analytics_Scripts.egg-info/SOURCES.txt
+Esra_Analytics_Scripts.egg-info/dependency_links.txt
+Esra_Analytics_Scripts.egg-info/requires.txt
+Esra_Analytics_Scripts.egg-info/top_level.txt
