@@ -26,6 +26,8 @@ selenium = "*"
 asyncio = "*"
 stripe = "*"
 pause = "*"
+http-request-randomizer = "*"
+requests = "*"
 
 [dev-packages]
 
