@@ -64,7 +64,7 @@ async def generateEntities():
 		#get email address, shipping info, and telephone
 		print("\nEnter details for email {} below\n".format(emails[i]))
 		entity["shipping_stinfo"] = input("Enter street address (eg. 4180 Flowers Drive): ")
-		entity["shipping_aptno"] = input("Enter apt number (optional - enter 'no' if not applicable): ")
+		entity["shipping_aptno"] = input("Enter apt number (optional - press ENTER if not applicable): ")
 		entity["shipping_zip"] = input("Enter zip code: ")
 		entity["shipping_city"] = input("Enter city: ")
 		entity["shipping_state"] = input("Enter State: ")
@@ -82,7 +82,7 @@ async def generateEntities():
 	return entities
 
 #Run single instance of a web driver buying the shoe for the given entity
-async def run_single_instance(model, size, entity, mode="new_drop"):
+async def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
 	while 1:
 		# proxy = await generateProxy()
 		# proxy_addr = proxy['ip'] + ':' + str(proxy['port'])
@@ -95,6 +95,7 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		# }
 		#start web driver and navigate to product page
 		FOOTLOCKER_HOME_URL = "https://www.footlocker.com/"
+		FOOTLOCKER_PRODUCT_URL = "https://www.footlocker.com/en/product/~/{}.html".format(productID) if productID != None else None
 		# FOOTLOCKER_HOME_URL = "https://www.facebook.com/"
 		LOGGER = logging.getLogger()
 		driver = webdriver.Chrome(executable_path='./chromedriver')
@@ -103,8 +104,9 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 			break
 		except:
 			driver.close()
+			exit()
 			continue
-	if mode == "new_drop":
+	if mode == "banner":
 		while 1:
 			try:
 				search = driver.find_element_by_xpath('//a[@type="button"]')
@@ -113,6 +115,17 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 				await asyncio.sleep(5)
 				continue
 		search.click()
+		possible_shoes = WebDriverWait(driver, 20).until(
+	 		EC.visibility_of_all_elements_located((By.CLASS_NAME, "ProductCard")))
+		print("Number of Shoes from Search: {}".format(len(possible_shoes)))
+		possible_shoes[0].click()
+	elif mode == "productID" and productID != None:
+		try:
+			driver.get(FOOTLOCKER_PRODUCT_URL)
+		except:
+			print("\nError - Product page not found\n")
+			driver.close()
+			exit()
 	else:
 		while 1:
 			try:
@@ -126,10 +139,10 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 			search.send_keys(Keys.ENTER)
 		else:
 			search.send_keys(Keys.RETURN)
-	possible_shoes = WebDriverWait(driver, 20).until(
- 		EC.visibility_of_all_elements_located((By.CLASS_NAME, "ProductCard")))
-	print("Number of Shoes from Search: {}".format(len(possible_shoes)))
-	possible_shoes[0].click()
+		possible_shoes = WebDriverWait(driver, 20).until(
+	 		EC.visibility_of_all_elements_located((By.CLASS_NAME, "ProductCard")))
+		print("Number of Shoes from Search: {}".format(len(possible_shoes)))
+		possible_shoes[0].click()
 
 	#select size and add to cart
 	if "." not in size:
@@ -163,14 +176,14 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		try:
 			add_to_cart[0].click()
 			break
-		except:
-			continue
+		except: continue
 
 	#do recaptcha and add shoe to cart again once recaptcha is finished
-	recaptcha_compete = input("\nCompete ReCaptcha. Enter '1' when ReCaptcha is finished: ")
-	if recaptcha_compete != '1':
+	recaptcha_compete = input("\nCompete ReCaptcha. Press ENTER when ReCaptcha is finished: ")
+	if recaptcha_compete != "":
 		driver.close()
 		print("\n ReCaptcha failed, exiting..")
+		exit()
 	#handle weird footlocker api error when finishing recaptcha (just go back to product page and add to cart and should work)
 	if "api" in driver.current_url or "product" not in driver.current_url:
 		driver.execute_script("window.history.go(-1)")
@@ -199,8 +212,7 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 			try:
 				cart[0].click()
 				break
-			except:
-				continue
+			except: continue
 
 	#go to cart and proceed to checkout
 	view_cart_path = '//a[text()="View Cart"]'
@@ -214,8 +226,7 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		try:
 			view_cart[0].click()
 			break
-		except:
-			continue
+		except: continue
 	guest_chkout_path = '//a[text()="Guest Checkout"]'
 	guest_chkout = WebDriverWait(driver, 20).until(
 			EC.visibility_of_all_elements_located((By.XPATH, guest_chkout_path)))
@@ -228,8 +239,7 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		try:
 			guest_chkout[0].click()
 			break
-		except:
-			continue
+		except: continue
 
 	#enter personal and shipping info
 	fname = WebDriverWait(driver, 20).until(
@@ -250,12 +260,11 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		try:
 			save_n_continue[0].click()
 			break
-		except:
-			continue
+		except: continue
 	st_address = WebDriverWait(driver, 20).until(
 				EC.visibility_of_all_elements_located((By.XPATH, '//input[@name="line1"]')))
 	st_address[0].send_keys(entity["shipping_stinfo"])
-	if entity['shipping_aptno'] != "no":
+	if entity['shipping_aptno'] != "":
 		aptno = WebDriverWait(driver, 20).until(
 				EC.visibility_of_all_elements_located((By.XPATH, '//input[@name="line2"]')))
 		aptno[0].send_keys(entity["shipping_aptno"])
@@ -276,8 +285,7 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 		try:
 			save_n_continue2[0].click()
 			break
-		except:
-			continue
+		except: continue
 	await asyncio.sleep(3)
 	print("3333")
 	save_n_continue3 = WebDriverWait(driver, 20).until(
@@ -287,13 +295,12 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 			try:
 				save_n_continue3[0].click()
 				break
-			except:
-				continue
-	await asyncio.sleep(3)
+			except: continue
+	await asyncio.sleep(5)
 
 	#enter card info
-	credit_card_option = input("\n This doesn't work sometimes due to high security measures by footlocker. \nIf the bot pauses, enter the rest of credit card info and press '1' when complete: ")
-	while credit_card_option != '1':
+	credit_card_option = input("\n This doesn't work sometimes due to high security measures by footlocker. \nIf the bot pauses, enter the rest of credit card info and press ENTER when complete: ")
+	while credit_card_option != "":
 		WebDriverWait(driver, 20).until(EC.frame_to_be_available_and_switch_to_it((By.XPATH,"//iframe[@class='js-iframe']")))
 		card_no = WebDriverWait(driver, 20).until(
 					EC.visibility_of_all_elements_located((By.XPATH, '//input[@id="encryptedCardNumber"]')))
@@ -314,7 +321,8 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 					EC.visibility_of_all_elements_located((By.XPATH, '//input[@id="encryptedSecurityCode"]')))
 		card_pin[0].send_keys(entity["card_pin"])
 		driver.switch_to.default_content()
-	await asyncio.sleep(2)
+		await asyncio.sleep(2)
+	await asyncio.sleep(3)
 
 	#place order
 	place_order = WebDriverWait(driver, 20).until(
@@ -324,12 +332,11 @@ async def run_single_instance(model, size, entity, mode="new_drop"):
 			try:
 				place_order[0].click()
 				break
-			except:
-				continue
+			except: continue
 	else:
 		raise Exception("Could not find or click place order button")
 
-	print("\nInstance Completed")
+	print("\nSuccess - Shoe Ordered")
 
 
 
@@ -354,7 +361,7 @@ async def run_snkrbot():
 		"shipping_zip": "30318",
 		"shipping_city": "Atlanta",
 		"shipping_state": "GA",
-		"shipping_aptno": "no",
+		"shipping_aptno": "",
 		"first_name": "John",
 		"last_name": "Smith",
 		"telephone": "9194757292",
@@ -365,10 +372,15 @@ async def run_snkrbot():
 	}
 
 	print("\n\n Initializing SnkrBot...\n\n")
-	print("Enter Shoe Info Below")
-	model = input("Shoe Model Name (eg. Kobe 11, Jordan Retro 3, etc): ")
-	size = input("Shoe Size (eg. 11, 13.5): ")
-	await run_single_instance(model, size, dummy_entity, mode="search")
+	mode = input("Which mode would you like to use?\n\n1. Banner: Navigates to shoe based on top banner of homepage (useful for new drops)\n2. Search: Searches for shoe based on your shoe name\n3. ProductID - Based on your productID\n\nEnter the number of your choice: ")
+	if mode == "2":
+		print("Enter Shoe Info Below")
+		model = input("Shoe Model Name (eg. Kobe 11, Jordan Retro 3, etc): ")
+	elif mode == "3":
+		product_id = input("Enter productID: ")
+	size = str(np.random.randint(low=9, high=15))
+	format_mode = lambda i : ["banner", "search", "productID"][int(i)-1]
+	await run_single_instance(dummy_entity, mode=format_mode(mode), model=model if mode == "2" else None, size=size, productID=product_id if mode == "3" else None)
 	# entities = await generateEntities()
 	# insances = []
 	# for entity in entities:
