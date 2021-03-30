@@ -27,11 +27,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 from selenium.webdriver.common.action_chains import ActionChains
+from multiprocessing import Process, Pipe, Pool
 
 
 ### BEGINNING OF HELPER FUNCTIONS ###
 
-async def generateProxy():
+def generateProxy():
 	url = "https://proxy-orbit1.p.rapidapi.com/v1/"
 	querystring = {"location":"US","protocols":"socks4"}
 	headers = {
@@ -44,26 +45,26 @@ async def generateProxy():
 	return proxy
 
 #Generates credit card for given entity
-async def generateCard(entity):
+def generateCard(entity):
 	#TODO
 	pass
 
 #Checks if connections is there (i.e. if proxy works)
-async def has_connection(driver):
+def has_connection(driver):
     try:
         driver.find_element_by_xpath('//span[@jsselect="heading" and @jsvalues=".innerHTML:msg"]')
         return False
     except: return True
 
 #Checks for ad popup and kills it if present
-async def kill_ads(driver):
+def kill_ads(driver):
 	#Check if ad is present
-	await asyncio.sleep(5)
+	time.sleep(5)
 	try:
 		ad = WebDriverWait(driver, 2).until(
 			EC.visibility_of_all_elements_located((By.XPATH, "//div[@role='dialog']")))
 		print('1')
-		await asyncio.sleep(3)
+		time.sleep(3)
 		actions = ActionChains(driver)
 		for i in range(6):
 			actions.send_keys(Keys.TAB)
@@ -82,7 +83,7 @@ async def kill_ads(driver):
 
 
 #Generates entities
-async def generateEntities():
+def generateEntities():
 	entities = []
 	emails_input = input("Enter comma seperated list of emails (eg. john@abc.com, janet@def.com)")
 	emails = [i.strip() for i in emails_input.split(",")]
@@ -110,10 +111,10 @@ async def generateEntities():
 	return entities
 
 #Run single instance of a web driver buying the shoe for the given entity
-async def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
+def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
 	ad_is_killed = False
 	while 1:
-		# proxy = await generateProxy()
+		# proxy = generateProxy()
 		# proxy_addr = proxy['ip'] + ':' + str(proxy['port'])
 		# print(proxy_addr)
 		# webdriver.DesiredCapabilities.CHROME['proxy'] = {
@@ -141,11 +142,11 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 				search = driver.find_element_by_xpath('//a[@type="link"]')
 				break
 			except:
-				await asyncio.sleep(5)
+				time.sleep(5)
 				continue
 		search.click()
 		if ad_is_killed == False:
-			i = await kill_ads(driver)
+			i = kill_ads(driver)
 			ad_is_killed = True if i == 1 else False
 		possible_shoes = WebDriverWait(driver, 20).until(
 	 		EC.visibility_of_all_elements_located((By.CLASS_NAME, "ProductCard")))
@@ -164,7 +165,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 				search = driver.find_element_by_name("query")
 				break
 			except:
-				await asyncio.sleep(5)
+				time.sleep(5)
 				continue
 		search.send_keys(model)
 		if "windows" in platform.platform(terse=True).lower() or "linux" in platform.platform(terse=True).lower():
@@ -172,7 +173,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 		else:
 			search.send_keys(Keys.RETURN)
 		if ad_is_killed == False:
-			i = await kill_ads(driver)
+			i = kill_ads(driver)
 			ad_is_killed = True if i == 1 else False
 		possible_shoes = WebDriverWait(driver, 20).until(
 	 		EC.visibility_of_all_elements_located((By.CLASS_NAME, "ProductCard")))
@@ -181,7 +182,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 
 	#select size and add to cart
 	if ad_is_killed == False:
-		i = await kill_ads(driver)
+		i = kill_ads(driver)
 		ad_is_killed = True if i == 1 else False
 	if "." not in size:
 		size += ".0"
@@ -200,10 +201,10 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 			size_label[0].click()
 			break
 		except:
-			await asyncio.sleep(1)
+			time.sleep(1)
 			continue
 	if ad_is_killed == False:
-		i = await kill_ads(driver)
+		i = kill_ads(driver)
 		ad_is_killed = True if i == 1 else False
 	cart_path = '//button[text()="Add To Cart"]'
 	add_to_cart = WebDriverWait(driver, 20).until(
@@ -220,11 +221,18 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 		except: continue
 
 	#do recaptcha and add shoe to cart again once recaptcha is finished
-	recaptcha_compete = input("\nCompete ReCaptcha. Press ENTER when ReCaptcha is finished: ")
-	if recaptcha_compete != "":
-		driver.close()
-		print("\n ReCaptcha failed, exiting..")
-		exit()
+	while 1:
+		try:
+			recaptcha_present = WebDriverWait(driver, 5).until(
+				EC.visibility_of_all_elements_located((By.XPATH, '//div[@role="dialog"]')))
+			time.sleep(3)
+		except: break
+	# recaptcha_compete = input("\nCompete ReCaptcha. Press ENTER when ReCaptcha is finished: ")
+	# if recaptcha_compete != "":
+	# 	driver.close()
+	# 	print("\n ReCaptcha failed, exiting..")
+	# 	exit()
+	
 	#handle weird footlocker api error when finishing recaptcha (just go back to product page and add to cart and should work)
 	if "api" in driver.current_url or "product" not in driver.current_url:
 		driver.execute_script("window.history.go(-1)")
@@ -240,7 +248,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 			size_label[0].click()
 			break
 		except:
-			await asyncio.sleep(1)
+			time.sleep(1)
 			continue
 	cart = WebDriverWait(driver, 20).until(
 			EC.visibility_of_all_elements_located((By.XPATH, cart_path)))
@@ -276,7 +284,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 		driver.close()
 		raise Exception(error)
 	if ad_is_killed == False:
-		i = await kill_ads(driver)
+		i = kill_ads(driver)
 		ad_is_killed = True if i == 1 else False
 	while 1:
 		try:
@@ -314,7 +322,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 	postal = WebDriverWait(driver, 20).until(
 				EC.visibility_of_all_elements_located((By.XPATH, '//input[@name="postalCode"]')))
 	postal[0].send_keys(entity["shipping_zip"])
-	await asyncio.sleep(2)
+	time.sleep(2)
 	print("2222")
 	save_n_continue2 = WebDriverWait(driver, 20).until(
 				EC.visibility_of_all_elements_located((By.XPATH, '//button[text()="Save & Continue"]')))
@@ -323,7 +331,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 			save_n_continue2[0].click()
 			break
 		except: continue
-	await asyncio.sleep(3)
+	time.sleep(3)
 	print("3333")
 	try:
 		verify_addr = WebDriverWait(driver, 6).until(
@@ -337,7 +345,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 					break
 				except: continue
 	except: pass
-	await asyncio.sleep(5)
+	time.sleep(5)
 
 	#enter card info
 	print("\nEntering credit card info... This doesn't work sometimes due to high security measures by footlocker.\n")
@@ -345,34 +353,34 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 	iframes = WebDriverWait(driver, 20).until(EC.visibility_of_all_elements_located((By.XPATH,"//iframe[@class='js-iframe']")))
 	print("found iframes for entering card info. number of iframes = {}".format(len(iframes)))
 	iframes[0].click()
-	await asyncio.sleep(1)
+	time.sleep(1)
 	actions = ActionChains(driver)
 	actions.send_keys(entity["card_no"])
 	actions.perform()
 	print("entered card number")
-	await asyncio.sleep(1)
+	time.sleep(1)
 	iframes[1].click()
-	await asyncio.sleep(1)
+	time.sleep(1)
 	actions = ActionChains(driver)
 	actions.send_keys(entity["card_exp_mm"])
 	actions.perform()
 	print("entered card expiry month")
-	await asyncio.sleep(1)
+	time.sleep(1)
 	iframes[2].click()
-	await asyncio.sleep(1)
+	time.sleep(1)
 	actions = ActionChains(driver)
 	actions.send_keys(entity["card_exp_yy"])
 	actions.perform()
 	print("entered card expiry year")
-	await asyncio.sleep(1)
+	time.sleep(1)
 	iframes[3].click()
-	await asyncio.sleep(1)
+	time.sleep(1)
 	actions = ActionChains(driver)
 	actions.send_keys(entity["card_pin"])
 	actions.perform()
 	print("entered card pin")
 
-	await asyncio.sleep(2)
+	time.sleep(2)
 
 	#place order
 	cururl = driver.current_url
@@ -388,7 +396,7 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 		raise Exception("Could not find or click place order button")
 
 	#check if order went through
-	await asyncio.sleep(1)
+	time.sleep(1)
 	print("\nSuccess - Shoe Ordered") if driver.current_url != cururl else print("\nFailure - Check your information, something is wrong with it.")
 	return 0 if driver.current_url != cururl else 1
 
@@ -406,15 +414,15 @@ async def run_single_instance(entity, mode="banner", model=None, size=None, prod
 
 
 ### MAIN SNKRBOT FUNCTION ###
-async def run_snkrbot():
+def run_snkrbot():
 
 	###for testing purposes only###
 	dummy_entity = {
 		"email": "sahajveera@gmail.com",
-		"shipping_stinfo": "1070 Hemphill Avenue",
-		"shipping_zip": "30318",
-		"shipping_city": "Atlanta",
-		"shipping_state": "GA",
+		"shipping_stinfo": "399 Scholar Ct",
+		"shipping_zip": "07417",
+		"shipping_city": "Franklin Lakes",
+		"shipping_state": "NJ",
 		"shipping_aptno": "",
 		"first_name": "Sahajveer",
 		"last_name": "Anand",
@@ -424,6 +432,38 @@ async def run_snkrbot():
 		"card_exp_yy": "24",
 		"card_pin": "858"
 	}
+	dummy_entity2 = {
+		"email": "advaith101@gmail.com",
+		"shipping_stinfo": "1070 Hemphill Avenue",
+		"shipping_zip": "30318",
+		"shipping_city": "Atlanta",
+		"shipping_state": "GA",
+		"shipping_aptno": "",
+		"first_name": "Advaith",
+		"last_name": "Sekharan",
+		"telephone": "9194757292",
+		"card_no": "4111111111111111",
+		"card_exp_mm": "03",
+		"card_exp_yy": "24",
+		"card_pin": "858"
+	}
+	dummy_entity3 = {
+		"email": "joshkrafaeli@gmail.com",
+		"shipping_stinfo": "520 Emory Circle",
+		"shipping_zip": "30307",
+		"shipping_city": "Atlanta",
+		"shipping_state": "GA",
+		"shipping_aptno": "",
+		"first_name": "Josh",
+		"last_name": "Rafaeli",
+		"telephone": "4044748945",
+		"card_no": "4111111111111111",
+		"card_exp_mm": "03",
+		"card_exp_yy": "24",
+		"card_pin": "858"
+	}
+	dummy_entities = [dummy_entity, dummy_entity2, dummy_entity3]
+	###for testing purposes only###
 
 	print("\n\n Initializing SnkrBot... Bot Start Time: {}\n\n".format(datetime.datetime.now()))
 	mode = input("Which mode would you like to use?\n\n1. Banner: Navigates to shoe based on top banner of homepage (useful for new drops)\n2. Search: Searches for shoe based on your shoe name\n3. ProductID: Based on your productID\n\nEnter the number of your choice: ")
@@ -434,15 +474,16 @@ async def run_snkrbot():
 		product_id = input("Enter productID: ")
 	size = str(np.random.randint(low=9, high=15))
 	format_mode = lambda i : ["banner", "search", "productID"][int(i)-1]
-	success = await run_single_instance(dummy_entity, mode=format_mode(mode), model=model if mode == "2" else None, size=size, productID=product_id if mode == "3" else None)
-	sys.exit(success)
-	# entities = await generateEntities()
-	# insances = []
-	# for entity in entities:
-	# 	instance = asyncio.create_task(run_single_instance(model, size, entity))
-	# 	insances.append(instance)
-	# for instance in insances:
-	# 	await instance
+
+	# success = run_single_instance(dummy_entity, mode=format_mode(mode), model=model if mode == "2" else None, size=size, productID=product_id if mode == "3" else None)
+	# sys.exit(success)
+
+	# entities = generateEntities()
+	pool = Pool(processes=len(dummy_entities))
+	for entity in dummy_entities:
+		instance = pool.apply_async(run_single_instance, args=(entity, format_mode(mode), model if mode == "2" else None, size, product_id if mode == "3" else None))
+	pool.close()
+	pool.join()
 
 
 
@@ -450,7 +491,8 @@ async def run_snkrbot():
 
 #main method
 if __name__ == '__main__':
-	loop = asyncio.get_event_loop()
-	asyncio.ensure_future(run_snkrbot())
-	loop.run_forever()
-	loop.close()
+	run_snkrbot()
+	# loop = asyncio.get_event_loop()
+	# asyncio.ensure_future(run_snkrbot())
+	# loop.run_forever()
+	# loop.close()
