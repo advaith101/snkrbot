@@ -28,6 +28,10 @@ stripe = "*"
 pause = "*"
 http-request-randomizer = "*"
 requests = "*"
+bs4 = "*"
+beautifulsoup4 = "*"
+lxml = "*"
+keyboard = "*"
 
 [dev-packages]
 
