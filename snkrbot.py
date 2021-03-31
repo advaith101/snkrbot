@@ -16,6 +16,7 @@ import datetime
 import asyncio
 import requests
 import keyboard
+import csv
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -114,6 +115,7 @@ def generateEntities():
 def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
 	ad_is_killed = False
 	while 1:
+		#setup proxy
 		# proxy = generateProxy()
 		# proxy_addr = proxy['ip'] + ':' + str(proxy['port'])
 		# print(proxy_addr)
@@ -123,6 +125,7 @@ def run_single_instance(entity, mode="banner", model=None, size=None, productID=
 		#     "sslProxy":proxy_addr,
 		#     "proxyType":"MANUAL",
 		# }
+
 		#start web driver and navigate to product page
 		FOOTLOCKER_HOME_URL = "https://www.footlocker.com/"
 		FOOTLOCKER_PRODUCT_URL = "https://www.footlocker.com/en/product/~/{}.html".format(productID) if productID != None else None
@@ -134,8 +137,7 @@ def run_single_instance(entity, mode="banner", model=None, size=None, productID=
 			break
 		except:
 			driver.close()
-			exit()
-			continue
+			sys.exit("Unable to connect to URL - Check internet and proxy")
 	if mode == "banner":
 		while 1:
 			try:
@@ -221,18 +223,14 @@ def run_single_instance(entity, mode="banner", model=None, size=None, productID=
 		except: continue
 
 	#do recaptcha and add shoe to cart again once recaptcha is finished
-	while 1:
+	print("\nReCaptcha Time :)\n")
+	for i in range(600):
 		try:
 			recaptcha_present = WebDriverWait(driver, 5).until(
 				EC.visibility_of_all_elements_located((By.XPATH, '//div[@role="dialog"]')))
 			time.sleep(3)
 		except: break
-	# recaptcha_compete = input("\nCompete ReCaptcha. Press ENTER when ReCaptcha is finished: ")
-	# if recaptcha_compete != "":
-	# 	driver.close()
-	# 	print("\n ReCaptcha failed, exiting..")
-	# 	exit()
-	
+
 	#handle weird footlocker api error when finishing recaptcha (just go back to product page and add to cart and should work)
 	if "api" in driver.current_url or "product" not in driver.current_url:
 		driver.execute_script("window.history.go(-1)")
@@ -417,52 +415,57 @@ def run_single_instance(entity, mode="banner", model=None, size=None, productID=
 def run_snkrbot():
 
 	###for testing purposes only###
-	dummy_entity = {
-		"email": "sahajveera@gmail.com",
-		"shipping_stinfo": "399 Scholar Ct",
-		"shipping_zip": "07417",
-		"shipping_city": "Franklin Lakes",
-		"shipping_state": "NJ",
-		"shipping_aptno": "",
-		"first_name": "Sahajveer",
-		"last_name": "Anand",
-		"telephone": "2018353507",
-		"card_no": "4111111111111111",
-		"card_exp_mm": "03",
-		"card_exp_yy": "24",
-		"card_pin": "858"
-	}
-	dummy_entity2 = {
-		"email": "advaith101@gmail.com",
-		"shipping_stinfo": "1070 Hemphill Avenue",
-		"shipping_zip": "30318",
-		"shipping_city": "Atlanta",
-		"shipping_state": "GA",
-		"shipping_aptno": "",
-		"first_name": "Advaith",
-		"last_name": "Sekharan",
-		"telephone": "9194757292",
-		"card_no": "4111111111111111",
-		"card_exp_mm": "03",
-		"card_exp_yy": "24",
-		"card_pin": "858"
-	}
-	dummy_entity3 = {
-		"email": "joshkrafaeli@gmail.com",
-		"shipping_stinfo": "520 Emory Circle",
-		"shipping_zip": "30307",
-		"shipping_city": "Atlanta",
-		"shipping_state": "GA",
-		"shipping_aptno": "",
-		"first_name": "Josh",
-		"last_name": "Rafaeli",
-		"telephone": "4044748945",
-		"card_no": "4111111111111111",
-		"card_exp_mm": "03",
-		"card_exp_yy": "24",
-		"card_pin": "858"
-	}
-	dummy_entities = [dummy_entity, dummy_entity2, dummy_entity3]
+	# dummy_entity = {
+	# 	"email": "sahajveera@gmail.com",
+	# 	"shipping_stinfo": "399 Scholar Ct",
+	# 	"shipping_zip": "07417",
+	# 	"shipping_city": "Franklin Lakes",
+	# 	"shipping_state": "NJ",
+	# 	"shipping_aptno": "",
+	# 	"first_name": "Sahajveer",
+	# 	"last_name": "Anand",
+	# 	"telephone": "2018353507",
+	# 	"card_no": "4111111111111111",
+	# 	"card_exp_mm": "03",
+	# 	"card_exp_yy": "24",
+	# 	"card_pin": "858"
+	# }
+	# dummy_entity2 = {
+	# 	"email": "advaith101@gmail.com",
+	# 	"shipping_stinfo": "1070 Hemphill Avenue",
+	# 	"shipping_zip": "30318",
+	# 	"shipping_city": "Atlanta",
+	# 	"shipping_state": "GA",
+	# 	"shipping_aptno": "",
+	# 	"first_name": "Advaith",
+	# 	"last_name": "Sekharan",
+	# 	"telephone": "9194757292",
+	# 	"card_no": "4111111111111111",
+	# 	"card_exp_mm": "03",
+	# 	"card_exp_yy": "24",
+	# 	"card_pin": "858"
+	# }
+	# dummy_entity3 = {
+	# 	"email": "joshkrafaeli@gmail.com",
+	# 	"shipping_stinfo": "520 Emory Circle",
+	# 	"shipping_zip": "30307",
+	# 	"shipping_city": "Atlanta",
+	# 	"shipping_state": "GA",
+	# 	"shipping_aptno": "",
+	# 	"first_name": "Josh",
+	# 	"last_name": "Rafaeli",
+	# 	"telephone": "4044748945",
+	# 	"card_no": "4111111111111111",
+	# 	"card_exp_mm": "03",
+	# 	"card_exp_yy": "24",
+	# 	"card_pin": "858"
+	# }
+	# dummy_entities = [dummy_entity, dummy_entity2, dummy_entity3]
+	dummy_entities = []
+	with open('dummy_entities.csv', newline='') as csvfile:
+		reader = csv.DictReader(csvfile, delimiter=' ', quotechar='|')
+		for row in reader:
+			dummy_entities.append(row)
 	###for testing purposes only###
 
 	print("\n\n Initializing SnkrBot... Bot Start Time: {}\n\n".format(datetime.datetime.now()))
@@ -492,7 +495,9 @@ def run_snkrbot():
 #main method
 if __name__ == '__main__':
 	run_snkrbot()
-	# loop = asyncio.get_event_loop()
-	# asyncio.ensure_future(run_snkrbot())
-	# loop.run_forever()
-	# loop.close()
+
+
+
+
+
+
