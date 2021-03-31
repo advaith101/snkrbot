@@ -2,14 +2,12 @@ import os
 import sys
 import six
 import platform
-# import pause
 import argparse
 import logging.config
 import re
 import time
 import random
 import json
-import mysql.connector as mysql
 import pandas as pd
 import numpy as np
 import datetime
@@ -17,6 +15,7 @@ import asyncio
 import requests
 import keyboard
 import csv
+import multiprocessing
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -26,9 +25,13 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.proxy import Proxy, ProxyType
+from selenium.webdriver.chrome.options import Options
 from http_request_randomizer.requests.proxy.requestProxy import RequestProxy
 from selenium.webdriver.common.action_chains import ActionChains
-from multiprocessing import Process, Pipe, Pool
+from fake_useragent import UserAgent
+from random_user_agent.user_agent import UserAgent as UA
+from random_user_agent.params import SoftwareName, OperatingSystem
+
 
 
 ### BEGINNING OF HELPER FUNCTIONS ###
@@ -87,7 +90,7 @@ def kill_ads(driver):
 def generateEntities():
 	dummy_entities = []
 	with open('dummy_entities.csv', newline='') as csvfile:
-		reader = csv.DictReader(csvfile, delimiter=' ', quotechar='|')
+		reader = csv.DictReader(csvfile)
 		for row in reader:
 			dummy_entities.append(row)
 	return dummy_entities
@@ -95,30 +98,42 @@ def generateEntities():
 #Run single instance of a web driver buying the shoe for the given entity
 def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
 	ad_is_killed = False
-	while 1:
-		#setup proxy
-		# proxy = generateProxy()
-		# proxy_addr = proxy['ip'] + ':' + str(proxy['port'])
-		# print(proxy_addr)
-		# webdriver.DesiredCapabilities.CHROME['proxy'] = {
-		#     "httpProxy":proxy_addr,
-		#     "ftpProxy":proxy_addr,
-		#     "sslProxy":proxy_addr,
-		#     "proxyType":"MANUAL",
-		# }
 
-		#start web driver and navigate to product page
-		FOOTLOCKER_HOME_URL = "https://www.footlocker.com/"
-		FOOTLOCKER_PRODUCT_URL = "https://www.footlocker.com/en/product/~/{}.html".format(productID) if productID != None else None
-		# FOOTLOCKER_HOME_URL = "https://www.facebook.com/"
-		LOGGER = logging.getLogger()
-		driver = webdriver.Chrome(executable_path='./chromedriver')
-		try:
-			driver.get(FOOTLOCKER_HOME_URL)
-			break
-		except:
-			driver.close()
-			sys.exit("Unable to connect to URL - Check internet and proxy")
+	#setup proxy
+	# proxy = generateProxy()
+	# proxy_addr = proxy['ip'] + ':' + str(proxy['port'])
+	# print(proxy_addr)
+	# webdriver.DesiredCapabilities.CHROME['proxy'] = {
+	#     "httpProxy":proxy_addr,
+	#     "ftpProxy":proxy_addr,
+	#     "sslProxy":proxy_addr,
+	#     "proxyType":"MANUAL",
+	# }
+
+	#setup user agent
+	options = webdriver.ChromeOptions()
+	# ua = UserAgent()
+	# user_agent = ua.random
+	software_names = [SoftwareName.CHROME.value]
+	operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
+	user_agent_rotator = UA(software_names=software_names, operating_systems=operating_systems, limit=100)
+	user_agent = user_agent_rotator.get_random_user_agent()
+	# print('\n')
+	# print(user_agent)
+	options.add_argument(f'user-agent={user_agent}')
+
+
+	#start web driver and navigate to product page
+	FOOTLOCKER_HOME_URL = "https://www.footlocker.com/"
+	FOOTLOCKER_PRODUCT_URL = "https://www.footlocker.com/en/product/~/{}.html".format(productID) if productID != None else None
+	# TESTPAGE_HOME_URL = "https://www.facebook.com/"
+	LOGGER = logging.getLogger()
+	driver = webdriver.Chrome(executable_path='./chromedriver', options=options)
+	try:
+		driver.get(FOOTLOCKER_HOME_URL)
+	except:
+		driver.close()
+		sys.exit("Unable to connect to URL - Check internet and proxy")
 	if mode == "banner":
 		while 1:
 			try:
@@ -402,19 +417,18 @@ def run_snkrbot():
 		model = input("Shoe Model Name (eg. Kobe 11, Jordan Retro 3, etc): ")
 	elif mode == "3":
 		product_id = input("Enter productID: ")
-	size = str(np.random.randint(low=9, high=15))
 	format_mode = lambda i : ["banner", "search", "productID"][int(i)-1]
 
 	# success = run_single_instance(dummy_entity, mode=format_mode(mode), model=model if mode == "2" else None, size=size, productID=product_id if mode == "3" else None)
 	# sys.exit(success)
 
 	entities = generateEntities()
-	pool = Pool(processes=len(entities))
+	pool = multiprocessing.Pool(processes=len(entities))
 	for entity in entities:
+		size = str(np.random.randint(low=18, high=30)/2)
 		instance = pool.apply_async(run_single_instance, args=(entity, format_mode(mode), model if mode == "2" else None, size, product_id if mode == "3" else None))
 	pool.close()
 	pool.join()
-
 
 
 

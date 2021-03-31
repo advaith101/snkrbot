@@ -33,6 +33,8 @@ beautifulsoup4 = "*"
 lxml = "*"
 keyboard = "*"
 multiprocess = "*"
+fake-useragent = "*"
+random-user-agent = "*"
 
 [dev-packages]
 
