@@ -85,31 +85,12 @@ def kill_ads(driver):
 
 #Generates entities
 def generateEntities():
-	entities = []
-	emails_input = input("Enter comma seperated list of emails (eg. john@abc.com, janet@def.com)")
-	emails = [i.strip() for i in emails_input.split(",")]
-	for i in range(0, len(emails)):
-		entity = {}
-		entity["email"] = emails[i]
-		#get email address, shipping info, and telephone
-		print("\nEnter details for email {} below\n".format(emails[i]))
-		entity["shipping_stinfo"] = input("Enter street address (eg. 4180 Flowers Drive): ")
-		entity["shipping_aptno"] = input("Enter apt number (optional - press ENTER if not applicable): ")
-		entity["shipping_zip"] = input("Enter zip code: ")
-		entity["shipping_city"] = input("Enter city: ")
-		entity["shipping_state"] = input("Enter State: ")
-		print("\nEnter personal details for email {} below".format(emails[i]))
-		entity["first_name"] = input("Enter first name: ")
-		entity["last_name"] = input("Enter last name: ")
-		entity["telephone"] = input("Enter telephone number: ")
-		entity["card_no"] = input("Enter credit card number: ")
-		entity["card_exp_mm"] = input("Enter 2-digit credit card expiry month (eg. 08, 11): ")
-		entity["card_exp_yy"] = input("Enter 2-digit credit card expiry year (eg. 19, 21): ")
-		entity["card_pin"] = input("Enter credit card pin (eg. 221): ")
-		#assign credit card - TODO
-		entities.append(entity)
-	print("Check your entities:\n{}".format(entities))
-	return entities
+	dummy_entities = []
+	with open('dummy_entities.csv', newline='') as csvfile:
+		reader = csv.DictReader(csvfile, delimiter=' ', quotechar='|')
+		for row in reader:
+			dummy_entities.append(row)
+	return dummy_entities
 
 #Run single instance of a web driver buying the shoe for the given entity
 def run_single_instance(entity, mode="banner", model=None, size=None, productID=None):
@@ -414,60 +395,6 @@ def run_single_instance(entity, mode="banner", model=None, size=None, productID=
 ### MAIN SNKRBOT FUNCTION ###
 def run_snkrbot():
 
-	###for testing purposes only###
-	# dummy_entity = {
-	# 	"email": "sahajveera@gmail.com",
-	# 	"shipping_stinfo": "399 Scholar Ct",
-	# 	"shipping_zip": "07417",
-	# 	"shipping_city": "Franklin Lakes",
-	# 	"shipping_state": "NJ",
-	# 	"shipping_aptno": "",
-	# 	"first_name": "Sahajveer",
-	# 	"last_name": "Anand",
-	# 	"telephone": "2018353507",
-	# 	"card_no": "4111111111111111",
-	# 	"card_exp_mm": "03",
-	# 	"card_exp_yy": "24",
-	# 	"card_pin": "858"
-	# }
-	# dummy_entity2 = {
-	# 	"email": "advaith101@gmail.com",
-	# 	"shipping_stinfo": "1070 Hemphill Avenue",
-	# 	"shipping_zip": "30318",
-	# 	"shipping_city": "Atlanta",
-	# 	"shipping_state": "GA",
-	# 	"shipping_aptno": "",
-	# 	"first_name": "Advaith",
-	# 	"last_name": "Sekharan",
-	# 	"telephone": "9194757292",
-	# 	"card_no": "4111111111111111",
-	# 	"card_exp_mm": "03",
-	# 	"card_exp_yy": "24",
-	# 	"card_pin": "858"
-	# }
-	# dummy_entity3 = {
-	# 	"email": "joshkrafaeli@gmail.com",
-	# 	"shipping_stinfo": "520 Emory Circle",
-	# 	"shipping_zip": "30307",
-	# 	"shipping_city": "Atlanta",
-	# 	"shipping_state": "GA",
-	# 	"shipping_aptno": "",
-	# 	"first_name": "Josh",
-	# 	"last_name": "Rafaeli",
-	# 	"telephone": "4044748945",
-	# 	"card_no": "4111111111111111",
-	# 	"card_exp_mm": "03",
-	# 	"card_exp_yy": "24",
-	# 	"card_pin": "858"
-	# }
-	# dummy_entities = [dummy_entity, dummy_entity2, dummy_entity3]
-	dummy_entities = []
-	with open('dummy_entities.csv', newline='') as csvfile:
-		reader = csv.DictReader(csvfile, delimiter=' ', quotechar='|')
-		for row in reader:
-			dummy_entities.append(row)
-	###for testing purposes only###
-
 	print("\n\n Initializing SnkrBot... Bot Start Time: {}\n\n".format(datetime.datetime.now()))
 	mode = input("Which mode would you like to use?\n\n1. Banner: Navigates to shoe based on top banner of homepage (useful for new drops)\n2. Search: Searches for shoe based on your shoe name\n3. ProductID: Based on your productID\n\nEnter the number of your choice: ")
 	if mode == "2":
@@ -481,9 +408,9 @@ def run_snkrbot():
 	# success = run_single_instance(dummy_entity, mode=format_mode(mode), model=model if mode == "2" else None, size=size, productID=product_id if mode == "3" else None)
 	# sys.exit(success)
 
-	# entities = generateEntities()
-	pool = Pool(processes=len(dummy_entities))
-	for entity in dummy_entities:
+	entities = generateEntities()
+	pool = Pool(processes=len(entities))
+	for entity in entities:
 		instance = pool.apply_async(run_single_instance, args=(entity, format_mode(mode), model if mode == "2" else None, size, product_id if mode == "3" else None))
 	pool.close()
 	pool.join()
