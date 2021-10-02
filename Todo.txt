@@ -1,0 +1,7 @@
+TODO:
+
+1. Change kill_ads() to be more human-like. IN PROGRESS
+2. Change all send_keys() calls to a custom function where we type in a humanlike manner. DONE
+3. Use Bezier Curves to navigate through GUI.
+4. *** SOLVE FOOTLOCKER BAN ***
+5. Handle error when size is sold out (keep changing size to find one thats available)

@@ -35,6 +35,10 @@ keyboard = "*"
 multiprocess = "*"
 fake-useragent = "*"
 random-user-agent = "*"
+scipy = "*"
+2captcha-python = "*"
+undetected-chromedriver = "*"
+pickle-mixin = "*"
 
 [dev-packages]
 
